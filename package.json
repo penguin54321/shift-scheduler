@@ -1,0 +1,21 @@
+{
+  "name": "shift-scheduler",
+  "private": true,
+  "description": "員工自助排班系統 — Vue 3 + Firebase (Serverless)",
+  "scripts": {
+    "install:all": "npm install && npm --prefix functions install && npm --prefix web install",
+    "build": "npm --prefix functions run build && npm --prefix web run build",
+    "test": "npm --prefix functions test",
+    "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-shift-scheduler --import=./.emulator-data --export-on-exit=./.emulator-data",
+    "dev": "npm --prefix web run dev",
+    "set-role": "node scripts/set-role.mjs",
+    "deploy": "npm run build && firebase deploy",
+    "test:e2e": "node scripts/e2e-test.cjs",
+    "seed:demo": "npm --prefix functions run build && node scripts/seed-demo.cjs",
+    "seed:prod-demo": "npm --prefix functions run build && node scripts/seed-prod-demo.cjs"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.37.0",
+    "firebase-admin": "^14.5.1"
+  }
+}

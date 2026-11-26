@@ -1,0 +1,74 @@
+rules_version = '2';
+
+// 原則：前端「只讀」。所有排班相關寫入都必須經過 Cloud Functions 驗證，
+// 唯一例外是老闆維護員工白名單（單純的 CRUD，用規則驗證格式即可）。
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isBoss() {
+      return signedIn() && request.auth.token.get('role', '') == 'boss';
+    }
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+    function isEmployee() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/allowlist/$(myEmail()));
+    }
+    function isMember() {
+      return isBoss() || isEmployee();
+    }
+
+    // 員工白名單：文件 ID = 小寫 email
+    match /allowlist/{email} {
+      allow read: if isBoss() || (signedIn() && email == myEmail());
+      allow create, update: if isBoss()
+        && request.resource.data.keys().hasOnly(['email', 'name', 'createdAt'])
+        && request.resource.data.email == email
+        && email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && email == email.lower()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 30;
+      allow delete: if isBoss();
+    }
+
+    // 個人班表（ID = YYYY-MM_uid）：本人或老闆可讀；寫入只能透過 saveSchedule
+    // 用文件 ID 判斷本人，而不是 resource.data.uid —— 尚未排班時文件不存在，
+    // resource 為 null，用 resource.data 判斷會讓新員工的讀取被拒絕。
+    match /schedules/{id} {
+      allow read: if isBoss()
+        || (isEmployee() && id.matches('^[0-9]{4}-[0-9]{2}_' + request.auth.uid + '$'));
+      allow write: if false;
+    }
+
+    // 每日已排人數（即時顯示 x/3）
+    match /dayCounts/{date} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    match /specialDays/{date} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    match /holidays/{year} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    match /settings/{doc} {
+      allow read: if isMember();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

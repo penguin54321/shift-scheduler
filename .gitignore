@@ -1,0 +1,17 @@
+node_modules/
+dist/
+functions/lib/
+.emulator-data/
+*.log
+.DS_Store
+.env.local
+.env.*.local
+# 服務帳號金鑰絕對不能進版控
+scripts/keys/
+*-service-account*.json
+serviceAccount*.json
+.firebase/
+
+# 模擬器匯出與 Claude 設定
+firebase-export-*/
+.claude/
